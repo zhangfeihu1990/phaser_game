@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+    <title>Tiles</title>
+	<script type="text/javascript" src="js/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+<script type="text/javascript">
+    var game = new Phaser.Game(800, 600, Phaser.CANVAS, 'phaser-example', { preload: preload, create: create, update: update });
+
+function preload() {
+    game.load.tilemap('level1', 'assets/tiles/tiles.json', null, Phaser.Tilemap.TILED_JSON);
+    game.load.image('tile', 'assets/tiles/tiles.png');
+    game.load.image('player', 'assets/dude.png');
+}
+
+var map;
+
+var backgroundLayer;
+
+    var blockedLayer;
+
+var cursors;
+
+function create() {
+    game.physics.startSystem(Phaser.Physics.ARCADE);
+   // game.stage.backgroundColor = '#787878';
+    map = game.add.tilemap('level1');
+    map.addTilesetImage('tiles', 'tile');
+    // 设置碰撞，setCollisionBetween(13, 17)是编号从13到17的tile都设置碰撞
+//    map.setCollisionBetween(13, 17);
+//    map.setCollisionBetween(20, 25);
+//    map.setCollisionBetween(27, 29);
+//    map.setCollision(40);
+    // layer
+    backgroundLayer = map.createLayer('backgroundLayer');
+    blockedLayer = map.createLayer('blockedLayer');
+    //layer.debug = true;
+    backgroundLayer.resizeWorld();
+
+    cursors = game.input.keyboard.createCursorKeys();
+}
+
+function update() {
+
+
+}
+</script>
+</body>
+</html>

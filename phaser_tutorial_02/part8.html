@@ -13,31 +13,86 @@
 <body>
 
 <script type="text/javascript">
-
+//https://www.phaser-china.com/docs/Index.html
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
 function preload() {
 
     game.load.image('sky', 'assets/sky.png');
+   // game.load.image('sky', 'assets/spacewar/starfield.png');
+
     game.load.image('ground', 'assets/platform.png');
     game.load.image('star', 'assets/star.png');
     game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+    game.load.spritesheet('rocket','assets/rocket.png', 106,96,3);
+    game.load.spritesheet('car','assets/car.png',160,160,5);
+    game.load.spritesheet('walkman', 'assets/walkman.png',41,79,5)
+    //game.load.audio('myaudio', [ 'assets/audio/myaudio.mp3', 'assets/audio/SoundEffects/magical_horror_audiosprite.ogg' ]);
+    game.load.audio('myaudio', 'assets/audio/myaudio.mp3');
+    game.load.spritesheet('kaboom', 'assets/spacewar/explode.png', 128, 128);
+    game.load.spritesheet('haima','assets/haima.png',64, 64, 4);
+    // 全屏
+    game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+    game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
 
+    game.load.image('fireball', 'assets/buttons/fireball.png',40,30);
+        // 按钮
+    game.load.spritesheet('buttonvertical', 'assets/buttons/button-vertical.png',64,64);
+    game.load.spritesheet('buttonhorizontal', 'assets/buttons/button-horizontal.png',96,64);
+    game.load.spritesheet('buttondiagonal', 'assets/buttons/button-diagonal.png',64,64);
+    game.load.spritesheet('buttonfire', 'assets/buttons/button-round-a.png',96,96);
+    game.load.spritesheet('buttonjump', 'assets/buttons/button-round-b.png',96,96);
 }
 
 var player;
+var rocket;
+var car;
+var walkman;
 var platforms;
 var cursors;
 
 var stars;
 
-function create() {
+var mya
+var explosions;
+var sky;
+var controlbutton;
 
+var haima;
+var bugs;
+var index = 0;
+var data;
+var pos = [];
+
+var fireballs;
+var fireRate = 300;
+var nextFire = 0;
+var left=false;
+var right=false;
+var duck= false;
+var fire=false;
+var jump=false;
+function create() {
+    // 在移动设备上全屏
+    if (!game.device.desktop){ game.input.onDown.add(gofull, this); }
     //  We're going to be using physics, so enable the Arcade Physics system
+    //原来的物理系统
     game.physics.startSystem(Phaser.Physics.ARCADE);
 
+    //--------------- 开启物理系统
+//    game.physics.startSystem(Phaser.Physics.P2JS);
+//    game.physics.p2.gravity.y = 1200;
+//    game.world.setBounds(0, 0, 2000, 600);
+//    // 左边，右边，上边，下边，碰撞检测
+//    game.physics.p2.setBoundsToWorld(true, true, false, true, false);
+//    // 摩擦
+//    game.physics.p2.friction = 5;
+//    //---------------------
+
     //  A simple background for our game
-    game.add.sprite(0, 0, 'sky');
+   //  game.add.sprite(0, 0, 'sky');
+    sky = game.add.tileSprite(0, 0,800,600 ,'sky');
+    sky.fixedToCamera = true;
 
     //  The platforms group contains the ground and the 2 ledges we can jump on
     platforms = game.add.group();
@@ -63,18 +118,51 @@ function create() {
 
     // The player and its settings
     player = game.add.sprite(32, game.world.height - 150, 'dude');
+    rocket = game.add.sprite(32, game.world.height - 100, 'rocket');
+    game.add.tween(rocket).from( { y: 0 }, 6000, Phaser.Easing.Bounce.Out, true);
+    car = game.add.sprite(32, game.world.height-140, 'car');
+    walkman = game.add.sprite(32,game.world.height-150,'walkman');
+    haima = game.add.sprite(42,game.world.height - 170, 'haima');
 
     //  We need to enable physics on the player
+    //game.physics.p2.enable(player);
     game.physics.arcade.enable(player);
+    game.physics.arcade.enable(rocket);
+    game.physics.arcade.enable(car);
+    game.physics.arcade.enable(walkman);
+    game.physics.arcade.enable(haima);
 
     //  Player physics properties. Give the little guy a slight bounce.
     player.body.bounce.y = 0.2;
     player.body.gravity.y = 300;
     player.body.collideWorldBounds = true;
 
+    player.anchor.setTo(0.5, 0.5);
+    player.animations.add('kaboom');
+
+    //rocket.body.gravity.y = 100;
+    rocket.body.collideWorldBounds = false;
+
+    //car physics properties
+    car.body.bounce.y = 0.5;
+    car.body.gravity.y = 400;
+    car.body.collideWorldBounds = true;
+
+    walkman.body.bounce.y = 0.5;
+    walkman.body.gravity.y = 400;
+    walkman.body.collideWorldBounds = true;
+
     //  Our two animations, walking left and right.
     player.animations.add('left', [0, 1, 2, 3], 10, true);
     player.animations.add('right', [5, 6, 7, 8], 10, true);
+    rocket.animations.add('up',[0,1,2],true);
+    car.animations.add('moveLeft',[0,1],true);
+    car.animations.add('moveRight',[3,4],true);
+
+    walkman.animations.add('walkLeft',[0,1],true);
+    walkman.animations.add('walkRight',[2,3],true);
+
+    haima.animations.add('swim',[0,1,2],true);
 
     //  Finally some stars to collect
     stars = game.add.group();
@@ -94,37 +182,183 @@ function create() {
         //  This just gives each star a slightly random bounce value
         star.body.bounce.y = 0.7 + Math.random() * 0.2;
     }
+    mya = game.add.audio('myaudio');
+    mya.allowMultiple = false;
+    mya.addMarker('hehe',1,8);
 
-    //  Our controls.
-    cursors = game.input.keyboard.createCursorKeys();
-    
+    // 子弹的group
+    //---------fireballs = game.add.group();
+   // ---------fireballs.createMultiple(500, 'fireball', 0, false);
+        //  Our bullet group
+    fireballs = game.add.group();
+    fireballs.enableBody = true;
+    fireballs.physicsBodyType = Phaser.Physics.ARCADE;
+    fireballs.createMultiple(1, 'fireball');
+    fireballs.setAll('anchor.x', 0.5);
+    fireballs.setAll('anchor.y', 1);
+    fireballs.setAll('outOfBoundsKill', true);
+    fireballs.setAll('checkWorldBounds', true);
+
+
+        //  An explosion pool
+    explosions = game.add.group();
+    explosions.createMultiple(30, 'kaboom');
+    //explosions.forEach(setupInvader, this);
+
+
+     //  Our controls.
+     cursors = game.input.keyboard.createCursorKeys();
+
+
+
+    controlbutton = game.input.keyboard.addKeys( { 'up': Phaser.KeyCode.W, 'down': Phaser.KeyCode.S, 'left': Phaser.KeyCode.A, 'right': Phaser.KeyCode.D } );
+
+     //game.world.setBounds(0, 0, 1920, 1920);
+     game.camera.follow(player);
+
+    var tweenData = { x: 0, y: 0 };
+    // 使用game.make创建出来的东西，不会被自动加入到游戏世界中去，这是和game.add不同的地方
+    tween = game.make.tween(tweenData).to( { x: 100, y: 400 }, 2000, "Sine.easeInOut");
+    tween.yoyo(true);
+    // 生成tween的数据，1秒钟60帧
+    data = tween.generateData(60);
+    // 精灵组
+    bugs = game.add.group();
+    pos.push(new Phaser.Point(100, 0));
+    pos.push(new Phaser.Point(100, 100));
+    pos.push(new Phaser.Point(100, 70));
+    bugs.create(pos[0].x, pos[0].y, 'haima');
+    bugs.create(pos[1].x, pos[1].y, 'haima');
+    bugs.create(pos[2].x, pos[2].y, 'haima');
+   bugs.getAt(0).enableBody = true;
+     game.physics.arcade.enable(bugs.getAt(0));
+    //bugs.body.collideWorldBounds = true;
+    bugs.getAt(0).body.collideWorldBounds = true;
+
+
+
+     // 创建虚拟按键
+    //game, x, y, key, callback, callbackContext, overFrame, outFrame, downFrame, upFrame
+    buttonjump = game.add.button(600, 500, 'buttonjump', null, this, 0, 1, 0, 1);
+    // 相对相机固定
+    buttonjump.fixedToCamera = true;
+    buttonjump.events.onInputOver.add(function(){jump=true;});
+    buttonjump.events.onInputOut.add(function(){jump=false;});
+    buttonjump.events.onInputDown.add(function(){jump=true;});
+    buttonjump.events.onInputUp.add(function(){jump=false;});
+
+    buttonfire = game.add.button(700, 500, 'buttonfire', null, this, 0, 1, 0, 1);
+    buttonfire.fixedToCamera = true;
+    buttonfire.events.onInputOver.add(function(){fire=true;});
+    buttonfire.events.onInputOut.add(function(){fire=false;});
+    buttonfire.events.onInputDown.add(function(){fire=true;});
+    buttonfire.events.onInputUp.add(function(){fire=false;});
+
+    buttonleft = game.add.button(0, 472, 'buttonhorizontal', null, this, 0, 1, 0, 1);
+    buttonleft.fixedToCamera = true;
+    buttonleft.events.onInputOver.add(function(){left=true;});
+    buttonleft.events.onInputOut.add(function(){left=false;});
+    buttonleft.events.onInputDown.add(function(){left=true;});
+    buttonleft.events.onInputUp.add(function(){left=false;});
+
+    buttonbottomleft = game.add.button(32, 536, 'buttondiagonal', null, this, 6, 4, 6, 4);
+    buttonbottomleft.fixedToCamera = true;
+    buttonbottomleft.events.onInputOver.add(function(){left=true;duck=true;});
+    buttonbottomleft.events.onInputOut.add(function(){left=false;duck=false;});
+    buttonbottomleft.events.onInputDown.add(function(){left=true;duck=true;});
+    buttonbottomleft.events.onInputUp.add(function(){left=false;duck=false;});
+
+    buttonright = game.add.button(160, 472, 'buttonhorizontal', null, this, 0, 1, 0, 1);
+    buttonright.fixedToCamera = true;
+    buttonright.events.onInputOver.add(function(){right=true;});
+    buttonright.events.onInputOut.add(function(){right=false;});
+    buttonright.events.onInputDown.add(function(){right=true;});
+    buttonright.events.onInputUp.add(function(){right=false;});
+
+    buttonbottomright = game.add.button(160, 536, 'buttondiagonal', null, this, 7, 5, 7, 5);
+    buttonbottomright.fixedToCamera = true;
+    buttonbottomright.events.onInputOver.add(function(){right=true;duck=true;});
+    buttonbottomright.events.onInputOut.add(function(){right=false;duck=false;});
+    buttonbottomright.events.onInputDown.add(function(){right=true;duck=true;});
+    buttonbottomright.events.onInputUp.add(function(){right=false;duck=false;});
+
+    buttondown = game.add.button(96, 536, 'buttonvertical', null, this, 0, 1, 0, 1);
+    buttondown.fixedToCamera = true;
+    buttondown.events.onInputOver.add(function(){duck=true;});
+    buttondown.events.onInputOut.add(function(){duck=false;});
+    buttondown.events.onInputDown.add(function(){duck=true;});
+    buttondown.events.onInputUp.add(function(){duck=false;});
+
 }
 
 function update() {
+   // gun dong beijing
+//sky.tilePosition.y += 2;
+     //haima swim
+    haima.animations.play('swim');
+    bugs.getAt(0).animations.play('swim');
+     // 应用tween数据
+    //bugs.getAt(0).x = pos[0].x + data[index].x;
+    bugs.getAt(0).y = pos[0].y + data[index].y;
+    // 取一半
+    bugs.getAt(1).x = pos[1].x + (data[index].x / 2);
+    bugs.getAt(1).y = pos[1].y + data[index].y;
+    // x反向
+    bugs.getAt(2).x = pos[2].x - data[index].x;
+    bugs.getAt(2).y = pos[2].y + data[index].y;
+    index++;
+    // 重复播放
+    if (index === data.length) {
+        index = 0;
+    }
 
     //  Collide the player and the stars with the platforms
     game.physics.arcade.collide(player, platforms);
     game.physics.arcade.collide(stars, platforms);
+    game.physics.arcade.collide(bugs.getAt(0), platforms);
 
     //  Checks to see if the player overlaps with any of the stars, if he does call the collectStar function
     game.physics.arcade.overlap(player, stars, collectStar, null, this);
+    game.physics.arcade.overlap(player, rocket, moveRocket, null, this);
+
 
     //  Reset the players velocity (movement)
     player.body.velocity.x = 0;
 
-    if (cursors.left.isDown)
+
+    car.body.velocity.x = 0;
+
+    walkman.body.velocity.x = 0;
+if (left && !duck)
+    //if (cursors.left.isDown)
+    //if(controlbutton.left.isDown)
+    //if(game.input.onMousecl)
     {
         //  Move to the left
         player.body.velocity.x = -150;
 
         player.animations.play('left');
+
+        car.body.velocity.x = -200;
+        car.animations.play('moveLeft');
+
+        walkman.body.velocity.x = -170;
+        walkman.animations.play('walkLeft', 5, false);
+
+        game.camera.x -= 4;
     }
-    else if (cursors.right.isDown)
+    else if (right && !duck)//if (cursors.right.isDown)
     {
         //  Move to the right
         player.body.velocity.x = 150;
 
         player.animations.play('right');
+
+        car.body.velocity.x = 200;
+        car.animations.play('moveRight');
+
+        walkman.body.velocity.x = 170;
+        walkman.animations.play('walkRight', 5, false);
     }
     else
     {
@@ -132,15 +366,32 @@ function update() {
         player.animations.stop();
 
         player.frame = 4;
+
+        car.animations.stop();
+        car.frame = 2;
+
+        rocket.body.velocity.x = 0;
     }
     
     //  Allow the player to jump if they are touching the ground.
-    if (cursors.up.isDown && player.body.touching.down)
+    //if (cursors.up.isDown && player.body.touching.down)
+    if (jump && player.body.touching.down)
+
     {
         player.body.velocity.y = -350;
+        rocket.body.velocity.y = -100;
+        rocket.animations.play('up');
+        mya.play('hehe');
     }
 
+    if (fire){fire_now(); }
+       // this works around a "bug" where a button gets stuck in pressed state
+    if (game.input.currentPointers == 0 && !game.input.activePointer.isMouse){
+        fire=false; right=false; left=false; duck=false; jump=false;
+    }
 }
+// some useful functions
+function gofull() { game.scale.startFullScreen(false);}
 
 function collectStar (player, star) {
     
@@ -148,7 +399,48 @@ function collectStar (player, star) {
     star.kill();
 
 }
+function moveRocket(player, rocket){
 
+    //var explosion = explosions.getFirstExists(false);
+    //explosion.reset(player.body.x, player.body.y);
+    player.play('kaboom',30, false, true);
+    //move the rocket
+
+    if(cursors.left.isDown){
+        rocket.body.velocity.x = -150;
+    }
+    else if(cursors.right.isDown){
+        rocket.body.velocity.x = +150;
+    }
+    }
+
+    function fire_now() {
+    if (game.time.now > nextFire){
+        nextFire = game.time.now + fireRate;
+        // get the first created fireball that no exists atm
+        var fireball = fireballs.getFirstExists(false);
+        if (fireball) {
+            // come to existance !
+            fireball.exists = true;
+            // remove the fireball after 2500 milliseconds - back to non-existance
+            fireball.lifespan=2500;
+            // if player looks to the left - create the fireball on his left side
+            if(player.frame <= 4) {
+                fireball.reset(player.x-20, player.y);
+               // game.physics.p2.enable(fireball);
+                //fireball.body.moveLeft(800);
+                //fireball.body.moveDown(180);
+                 fireball.body.velocity.x = -400;
+            } else {
+                fireball.reset(player.x+20, player.y);
+               // game.physics.p2.enable(fireball);
+                //fireball.body.moveRight(800);
+               // fireball.body.moveDown(180);
+                fireball.body.velocity.x = +400;
+            }
+            fireball.body.setCircle(10);
+        }
+    }}
 </script>
 
 </body>

@@ -24,16 +24,21 @@
     }
 	var map;
 	var layer;
+	var actKey;
+	var current=1;
 	function create(){
 		map = game.add.tilemap('levels');
         map.addTilesetImage('mario', 'tilesets');
-		layer = map.createLayer("level2");
+		layer = map.createLayer("level"+current);
         layer.resizeWorld();
 
-
+		 cursors = game.input.keyboard.createCursorKeys();
 	}
 	function update(){
-
+         if(cursors.down.isDown){
+			    current=2;
+	            create()
+            }
 	}
 </script>
 	</body>

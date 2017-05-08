@@ -126,7 +126,11 @@ function fireRocket(){
 function collisionHandler(bullet, invader){
     console.log('kill');
     //bullet.kill();
-    invader.kill();
+    invader.life--;
+    console.log("life:"+invader.life)
+    if(invader.life==0){
+      invader.kill();
+    }
 }
 function createInvaders(){
         for( var i = 0;i < 33;i++ ){
@@ -141,6 +145,7 @@ function createInvaders(){
         invader.outOfBoundsKill = true;
         invader.checkWorldBounds = true;
         invader.body.velocity.y = 10;
+        invader.life = 30;
         game.physics.arcade.moveToObject(invader,player,120);
     }
 }

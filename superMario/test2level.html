@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8" />
+		<title>SuperMario</title>
+
+		<script type="text/javascript" src="js/phaser.min.js"></script>
+		<style>
+		  body {
+		    padding: 0px;
+		    margin: 0px;
+		  }
+		  </style>
+	</head>
+
+	<body>
+<script type="text/javascript">
+    var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+    function preload(){
+        game.load.tilemap('levels','assets/twolevel.json',null, Phaser.Tilemap.TILED_JSON);
+		game.load.image('tilesets','assets/super_mario.png');
+
+    }
+	var map;
+	var layer;
+	function create(){
+		map = game.add.tilemap('levels');
+        map.addTilesetImage('mario', 'tilesets');
+		layer = map.createLayer("level2");
+        layer.resizeWorld();
+
+
+	}
+	function update(){
+
+	}
+</script>
+	</body>
+</html>

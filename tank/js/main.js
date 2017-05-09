@@ -1,5 +1,11 @@
 window.onload = function(){
 	var game = new Phaser.Game(480, 320, Phaser.AUTO, "game-area");
+	//state = new Phaser.StateManager(game);
+	//state.add("boot", Boot);
+	//state.add("loading", Loading);
+	//state.add("menu", Menu);
+	//state.add("main", Main);
+	//state.start("boot");
 	game.state.add("boot", Boot);
 	game.state.add("loading", Loading);
 	game.state.add("menu", Menu);
@@ -78,7 +84,7 @@ function Menu(game) {
 	};
 }
 
-function Main(game){
+function Main(game){var timer1;
 	var _levelInfo;
 	var isOver;
 
@@ -185,7 +191,7 @@ function Main(game){
 			this.addTouchKey(); //移动端显示虚拟按键
 		}
 		scoreText = game.add.text(16, 16, "Enemy: " + score, { fontSize: "16px", fill: "#fff" });  
-		scoreText.fixedToCamera=true;  
+		scoreText.fixedToCamera=true;
 	};
 	this.update = function(){
 		game.physics.arcade.collide(player, levelLayer, this.bossHit, null, this); 
@@ -200,7 +206,7 @@ function Main(game){
 
 		player.body.velocity.setTo(0,0);
 		if(!isOver){
-			if(cursors.right.isDown || touchRight){ 
+			if(cursors.right.isDown || touchRight){
 				this.playerMove(8,0);
 				player.animations.play("right");
 				facing=1;

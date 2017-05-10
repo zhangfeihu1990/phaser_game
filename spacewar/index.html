@@ -35,6 +35,7 @@ function preload(){
  var kill_counts = 0;//斩首数量
  var bosss;//大boss
  var shootTime = 0;//设计间隔时间
+ var isOver = false;//当前level结束
 function create(){
     game.physics.startSystem(Phaser.Physics.ARCADE);//开启游戏物理系统
     starfield = game.add.tileSprite(0,0,800,600,'starfield');//添加星空
@@ -76,16 +77,23 @@ function create(){
 
     cursors = game.input.keyboard.createCursorKeys();
     fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-
+    //fireButton.onDown.add(actReact(),this);
 }var rocket;
 function update(){
   starfield.tilePosition.y += 2;
-
-  if(fireButton.isDown){
+    if(fireButton.isDown)
+{
+      if(!isOver){
       fireBullet();
       //rocket = fireRocket();
      // game.physics.arcade.moveToObject(rocket,invaders.getAt(invaders.length-1),30,1200);//火箭跟踪敌人
-  }
+  }else{
+          game.add.text((game.width)/2, (game.height)/2, "You Win!", {fontSize: "16px", fill: "#fff" }).anchor.setTo(0.5);
+          create();
+          //invaders.setAllChildren("live",false);
+      }
+}
+
 
   player.body.velocity.setTo(0, 0);
   if(cursors.left.isDown){
@@ -158,6 +166,7 @@ function hintBoss(bullet, boss){
     boss.life--;
     if(boss.life==0){
       boss.kill();
+      isOver = true;
     }
 }
 function createInvaders(){

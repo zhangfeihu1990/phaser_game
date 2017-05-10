@@ -13,206 +13,245 @@
 </head>
 <body>
 <script type="text/javascript">
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
-function preload(){
-    game.load.image('starfield', 'assets/starfield.png');
-    game.load.image('bullet', 'assets/bullet.png');
-    game.load.image('enemybullet', 'assets/enemy-bullet.png');
-    game.load.image('player', 'assets/player.png');
-    game.load.image('boss', 'assets/libellule.png');
-    game.load.spritesheet('invader', 'assets/invader32x32x4.png', 32, 32);
-    game.load.spritesheet('kaboom', 'assets/explode.png');
-    game.load.spritesheet('rocket', 'assets/rocket.png', 106, 96, 3);
-
-}
- var player;//英雄
- var invaders;//小喽啰
- var bullets;//英雄的炮火
- var rockets;//更猛烈的炮火
- var cursors;//操控键
- var starfield;
- var kill_counts = 0;//斩首数量
- var bosss;//大boss
- var shootTime = 0;//设计间隔时间
- var isOver = false;//当前level结束
-function create(){
-    game.physics.startSystem(Phaser.Physics.ARCADE);//开启游戏物理系统
-    starfield = game.add.tileSprite(0,0,800,600,'starfield');//添加星空
-    player = game.add.sprite(400,500,'player');//英雄出场！
-    player.anchor.setTo(0.5, 0.5);//待查
-    game.physics.enable(player,Phaser.Physics.ARCADE);//使具有物理性质
-
-    invaders = game.add.group();
-    invaders.enableBody = true;
-    invaders.physicsBodyType = Phaser.Physics.ARCADE;
-    //invaders.setAll('outOfBoundsKill', true);
-    //invaders.setAll('checkWorldBounds', true);
-    invaders.setAllChildren('health',2);
-    createInvaders();
-    //创建、设置炮弹属性
-    bullets = game.add.group();
-    bullets.enableBody = true;
-    bullets.physicsBodyType = Phaser.Physics.ARCADE;
-    bullets.createMultiple(1,'bullet');
-    bullets.setAll('anchor.x', 0.5);
-    bullets.setAll('anchor.y', 1);
-    bullets.setAll('outOfBoundsKill', true);
-    bullets.setAll('checkWorldBounds', true);
-
-    rockets = game.add.group();
-    rockets.enableBody = true;
-    rockets.physicsBodyType = Phaser.Physics.ARCADE;
-    rockets.createMultiple(1, 'rocket');
-    rockets.setAll('anchor.x',0.5);
-    rockets.setAll('anchor.y',1);
-    rockets.setAll('outOfBoundsKill', true);
-    rockets.setAll('checkWorldBounds', true);
-
-    bosss = game.add.group();
-    bosss.enableBody = true;
-    bosss.physicsBodyType = Phaser.Physics.ARCADE;
-
-    bosss.setAllChildren('health',2);
-
-    cursors = game.input.keyboard.createCursorKeys();
-    fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-    //fireButton.onDown.add(actReact(),this);
-}var rocket;
-function update(){
-  starfield.tilePosition.y += 2;
-    if(fireButton.isDown)
-{
-      if(!isOver){
-      fireBullet();
-      //rocket = fireRocket();
-     // game.physics.arcade.moveToObject(rocket,invaders.getAt(invaders.length-1),30,1200);//火箭跟踪敌人
-  }else{
-          game.add.text((game.width)/2, (game.height)/2, "You Win!", {fontSize: "16px", fill: "#fff" }).anchor.setTo(0.5);
-          create();
-          //invaders.setAllChildren("live",false);
-      }
-}
-
-
-  player.body.velocity.setTo(0, 0);
-  if(cursors.left.isDown){
-      player.body.velocity.x =-210;
-  }
-  else if(cursors.right.isDown){
-      player.body.velocity.x = 200;
-  }
-    console.log(invaders.countLiving());
-
-    if(invaders.countLiving()==0 && kill_counts <= 20){
-        createInvaders();
+window.onload = function(){
+	var game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-area' );//{ preload: preload, create: create, update: update }
+	//game.state.add("boot", Boot);
+	game.state.add("loading", Loading);
+	//game.state.add("menu", Menu);
+	game.state.add("main", Main);
+	//game.state.start("boot");
+    game.state.start("loading");
+};
+function Loading(game){
+    this.preload=function () {
+        game.load.image('starfield1', 'assets/starfield.png');
+        game.load.image('starfield2', 'assets/starfield2.jpg');
+        game.load.image('bullet', 'assets/bullet.png');
+        game.load.image('enemybullet', 'assets/enemy-bullet.png');
+        game.load.image('player', 'assets/player.png');
+        game.load.image('boss', 'assets/libellule.png');
+        game.load.spritesheet('invader', 'assets/invader32x32x4.png', 32, 32);
+        game.load.spritesheet('kaboom', 'assets/explode.png');
+        game.load.spritesheet('rocket', 'assets/rocket.png', 106, 96, 3);
     }
-   game.physics.arcade.overlap(bullets, invaders, collisionHandler, null, this);
-   game.physics.arcade.overlap(rockets, invaders, collisionHandler, null, this);
-      game.physics.arcade.overlap(bullets, bosss, hintBoss, null, this);//射中boss
-
-    if(rocket){//如何保留火箭存在的状态？
-        if(invaders.countLiving()>0)
-        game.physics.arcade.moveToObject(rocket,invaders.getAt(invaders.length-1),30,1200);//火箭跟踪敌人
-    }
-   game.physics.arcade.moveToObject(invaders.getAt(invaders.length-1),player,3,120);//跟踪模式
-
+	this.create=function () {
+		game.state.start("main");
+	};
 }
-
-function fireBullet(){console.log("fire");
-    if(game.time.now > shootTime){
-    bullet = bullets.getFirstExists(false);//待查
-    if(bullet){
-      bullet.reset(player.x, player.y + 8, 'bullet');
-      bullet.body.velocity.y = -400;
-         shootTime = game.time.now + 200;
+function Main(game) {
+    var player;//英雄
+    var invaders;//小喽啰
+    var bullets;//英雄的炮火
+    var rockets;//更猛烈的炮火
+    var cursors;//操控键
+    var starfield;
+    var kill_counts;//斩首数量
+    var bosss;//大boss
+    var shootTime;//设计间隔时间
+    var isOver;//当前level结束
+    var rocket;
+    var kills;
+    var currentLevel=1;
+    this.preload = function () {
+        kill_counts = 0;
+        shootTime = 0;
+        kills = kill_counts;
+        isOver = false;
     }
+    this.create = function () {
+        game.physics.startSystem(Phaser.Physics.ARCADE);//开启游戏物理系统
+        starfield = game.add.tileSprite(0, 0, 800, 600, 'starfield'+currentLevel);//添加星空
+        player = game.add.sprite(400, 500, 'player');//英雄出场！
+        player.anchor.setTo(0.5, 0.5);//待查
+        game.physics.enable(player, Phaser.Physics.ARCADE);//使具有物理性质
+
+        invaders = game.add.group();
+        invaders.enableBody = true;
+        invaders.physicsBodyType = Phaser.Physics.ARCADE;
+        //invaders.setAll('outOfBoundsKill', true);
+        //invaders.setAll('checkWorldBounds', true);
+        invaders.setAllChildren('health', 2);
+        this.createInvaders();
+        //创建、设置炮弹属性
+        bullets = game.add.group();
+        bullets.enableBody = true;
+        bullets.physicsBodyType = Phaser.Physics.ARCADE;
+        bullets.createMultiple(1, 'bullet');
+        bullets.setAll('anchor.x', 0.5);
+        bullets.setAll('anchor.y', 1);
+        bullets.setAll('outOfBoundsKill', true);
+        bullets.setAll('checkWorldBounds', true);
+
+        rockets = game.add.group();
+        rockets.enableBody = true;
+        rockets.physicsBodyType = Phaser.Physics.ARCADE;
+        rockets.createMultiple(1, 'rocket');
+        rockets.setAll('anchor.x', 0.5);
+        rockets.setAll('anchor.y', 1);
+        rockets.setAll('outOfBoundsKill', true);
+        rockets.setAll('checkWorldBounds', true);
+
+        bosss = game.add.group();
+        bosss.enableBody = true;
+        bosss.physicsBodyType = Phaser.Physics.ARCADE;
+
+        bosss.setAllChildren('health', 2);
+
+        cursors = game.input.keyboard.createCursorKeys();
+        fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        fireButton.onDown.add(this.actKeyDown, this);
+        //fireButton.onDown.add(actReact(),this);
+    }
+
+
+    this.update = function () {
+        starfield.tilePosition.y += 2;
+        if (!isOver) {
+
+                    player.body.velocity.setTo(0, 0);
+        if (cursors.left.isDown) {
+            player.body.velocity.x = -210;
         }
-}
+        else if (cursors.right.isDown) {
+            player.body.velocity.x = 200;
+        }
+        }
 
-function fireRocket(){
-    rocket = rockets.getFirstExists(false);
-    if(rocket){
 
-        var rocket = rockets.create(player.x, player.y + 8, 'rocket');
-        rocket.anchor.setTo(0.5, 0.5)
-        rocket.animations.add('fire',[0,1,2],8,true);
-        rocket.play('fire');
-        //rocket.body.velocity.y = -400;
-        //game.physics.arcade.moveToObject(rocket,invaders,120);
-        return rocket;
+
+        console.log(invaders.countLiving());
+
+        if (invaders.countLiving() == 0 && kill_counts <= 20) {
+            this.createInvaders();
+        }
+        game.physics.arcade.overlap(bullets, invaders, this.collisionHandler, null, this);
+        game.physics.arcade.overlap(rockets, invaders, this.collisionHandler, null, this);
+        game.physics.arcade.overlap(bullets, bosss, this.hintBoss, null, this);//射中boss
+
+        if (rocket) {//如何保留火箭存在的状态？
+            if (invaders.countLiving() > 0)
+                game.physics.arcade.moveToObject(rocket, invaders.getAt(invaders.length - 1), 30, 1200);//火箭跟踪敌人
+        }
+        game.physics.arcade.moveToObject(invaders.getAt(invaders.length - 1), player, 3, 120);//跟踪模式
+
     }
-}
+   this.actKeyDown = function(){
+       if(!isOver)
+               {
 
-function collisionHandler(bullet, invader){
-    console.log('kill');
-    bullet.kill();
-    invader.life--;
-    console.log("life:"+invader.life)
-    if(invader.life==0){
-      invader.kill();
-      kill_counts++;
-      if(kill_counts==3){
-        boss = bosss.create(400,20,'boss');//Boss出场！
-        boss.anchor.setTo(0.5, 0.5);//待查
-
-        boss.life = 5;
-      }
-    }
-}
-function hintBoss(bullet, boss){
-    console.log('kill'+boss.life);
-    bullet.kill();
-    boss.life--;
-    if(boss.life==0){
-      boss.kill();
-      isOver = true;
-    }
-}
-function createInvaders(){
-        for( var i = 0;i < 3;i++ ){
-        var a = Phaser.Math.between(50,200);
-        var b = Phaser.Math.between(50,100);
-        var c = Math.random()*4;
-        var invader = invaders.create(c*a,c*b,'invader');
-        invader.anchor.setTo(0.5, 0.5);
-        invader.animations.add('fly',[0,1,2,3],10,true);
-        invader.play('fly');
-        invader.body.move = false;
-        invader.outOfBoundsKill = true;
-        invader.checkWorldBounds = true;
-        invader.body.velocity.y = 10;
-        invader.life = 2;
-        game.physics.arcade.moveToObject(invader,player,120);
-    }
-}
-function createAliens () {
-
-    for (var y = 0; y < 4; y++)
-    {
-        for (var x = 0; x < 10; x++)
-        {
-            var alien = invaders.create(x * 48, y * 50, 'invader');
-            alien.anchor.setTo(0.5, 0.5);
-            alien.animations.add('fly', [ 0, 1, 2, 3 ], 20, true);
-            alien.play('fly');
-            alien.body.moves = false;
+                this.fireBullet();
+                //rocket = fireRocket();
+                // game.physics.arcade.moveToObject(rocket,invaders.getAt(invaders.length-1),30,1200);//火箭跟踪敌人
+            } else {
+                game.state.start("main");
+                //invaders.setAllChildren("live",false);
+            }
+   }
+    this.fireBullet = function () {
+        console.log("fire");
+        if (game.time.now > shootTime) {
+            bullet = bullets.getFirstExists(false);//待查
+            if (bullet) {
+                bullet.reset(player.x, player.y + 8, 'bullet');
+                bullet.body.velocity.y = -400;
+                shootTime = game.time.now + 200;
+            }
         }
     }
 
-    invaders.x = 100;
-    invaders.y = 50;
+    this.fireRocket = function () {
+        rocket = rockets.getFirstExists(false);
+        if (rocket) {
 
-    //  All this does is basically start the invaders moving. Notice we're moving the Group they belong to, rather than the invaders directly.
-    var tween = game.add.tween(invaders).to( { x: 200 }, 2000, Phaser.Easing.Linear.None, true, 0, 1000, true);
+            var rocket = rockets.create(player.x, player.y + 8, 'rocket');
+            rocket.anchor.setTo(0.5, 0.5)
+            rocket.animations.add('fire', [0, 1, 2], 8, true);
+            rocket.play('fire');
+            //rocket.body.velocity.y = -400;
+            //game.physics.arcade.moveToObject(rocket,invaders,120);
+            return rocket;
+        }
+    }
 
-    //  When the tween loops it calls descend
-    tween.onLoop.add(descend, this);
-}
-    function descend() {
+    this.collisionHandler = function (bullet, invader) {
+        console.log('kill');
+        bullet.kill();
+        invader.life--;
+        console.log("life:" + invader.life)
+        if (invader.life == 0) {
+            invader.kill();
+            kills++;
+            if (kills == 3) {
+                boss = bosss.create(400, 20, 'boss');//Boss出场！
+                boss.anchor.setTo(0.5, 0.5);//待查
 
-    aliens.y += 10;
+                boss.life = 5;
+            }
+        }
+    }
+    this.hintBoss = function (bullet, boss) {
+        console.log('kill' + boss.life);
+        bullet.kill();
+        boss.life--;
+        if (boss.life == 0) {
+            boss.kill();
+            isOver = true;
+                            game.add.text((game.width) / 2, (game.height) / 2, "You Win!", {
+                    fontSize: "16px",
+                    fill: "#fff"
+                }).anchor.setTo(0.5);
+                currentLevel++;
+        }
+    }
+    this.createInvaders = function () {
+        for (var i = 0; i < 3; i++) {
+            var a = Phaser.Math.between(50, 200);
+            var b = Phaser.Math.between(50, 100);
+            var c = Math.random() * 4;
+            var invader
+            if(currentLevel==1){
+             invader = invaders.create(c * a, c * b, 'invader');
+            }else{
+               invader = invaders.create(c * a, c * b, 'rocket');
+            }
+            invader.anchor.setTo(0.5, 0.5);
+            invader.animations.add('fly', [0, 1, 2], 10, true);
+            invader.play('fly');
+            invader.body.move = false;
+            invader.outOfBoundsKill = true;
+            invader.checkWorldBounds = true;
+            invader.body.velocity.y = 10;
+            invader.life = 2;
+            game.physics.arcade.moveToObject(invader, player, 120);
+        }
+    }
+    this.createAliens = function () {
 
+        for (var y = 0; y < 4; y++) {
+            for (var x = 0; x < 10; x++) {
+                var alien = invaders.create(x * 48, y * 50, 'invader');
+                alien.anchor.setTo(0.5, 0.5);
+                alien.animations.add('fly', [0, 1, 2, 3], 20, true);
+                alien.play('fly');
+                alien.body.moves = false;
+            }
+        }
+
+        invaders.x = 100;
+        invaders.y = 50;
+
+        //  All this does is basically start the invaders moving. Notice we're moving the Group they belong to, rather than the invaders directly.
+        var tween = game.add.tween(invaders).to({x: 200}, 2000, Phaser.Easing.Linear.None, true, 0, 1000, true);
+
+        //  When the tween loops it calls descend
+        tween.onLoop.add(this.descend, this);
+    }
+    this.descend = function () {
+
+        aliens.y += 10;
+
+    }
 }
 </script>
 </body>

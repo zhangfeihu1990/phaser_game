@@ -28,13 +28,15 @@ function Loading(game){
         game.load.image('starfield1', 'assets/starfield.png');
         game.load.image('starfield2', 'assets/starfield2.jpg');
         game.load.image('bullet', 'assets/bullet.png');
-        game.load.image('enemybullet', 'assets/enemy-bullet.png');
+        game.load.image('enemyBullet', 'assets/enemy-bullet.png');
         game.load.image('player', 'assets/player.png');
         game.load.image('boss', 'assets/libellule.png');
+        game.load.image('gear', 'assets/chilun.png');
+        game.load.image('wrench', 'assets/wrench.png');
         game.load.spritesheet('invader', 'assets/invader32x32x4.png', 32, 32);
         game.load.spritesheet('kaboom', 'assets/explode.png');
         game.load.spritesheet('rocket', 'assets/rocket.png', 106, 96, 3);
-        game.load.image('moon', 'assets/moon.png');
+        game.load.image('moon', 'assets/center11.png');
     }
 	this.create=function () {
 		game.state.start("main");
@@ -42,39 +44,47 @@ function Loading(game){
 }
 function Main(game) {
     var player;//英雄
+    var playerlife;
     var invaders;//小喽啰
     var bullets;//英雄的炮火
+    var enemyBullets;
     var rockets;//更猛烈的炮火
     var cursors;//操控键
     var starfield;
     var kill_counts;//斩首数量
     var bosss;//大boss
+    var wrenches;//扳手组
+    var gears;//齿轮组
     var shootTime;//设计间隔时间
     var isOver;//当前level结束
     var rocket;
     var kills;
     var currentLevel=1;
-
+    var livingEnemies = [];
+    var lifestate;
+    //星球运行
     var distance = 300;
-var speed = 4;
-var stars;
-
-var max = 200;
-var xx = [];
-var yy = [];
-var zz = [];
+    var speed = 4;
+    var stars;
+    var max = 200;
+    var xx = [];
+    var yy = [];
+    var zz = [];
 
     this.preload = function () {
         kill_counts = 0;
         shootTime = 0;
+        firingTimer = 0;
         kills = kill_counts;
         isOver = false;
+        playerlife = 3;
     }
     this.create = function () {
         game.physics.startSystem(Phaser.Physics.ARCADE);//开启游戏物理系统
         starfield = game.add.tileSprite(0, 0, 800, 600, 'starfield'+currentLevel);//添加星空
         player = game.add.sprite(400, 500, 'player');//英雄出场！
         player.anchor.setTo(0.5, 0.5);//待查
+        player.life = 3;
         game.physics.enable(player, Phaser.Physics.ARCADE);//使具有物理性质
 
         invaders = game.add.group();
@@ -82,7 +92,7 @@ var zz = [];
         invaders.physicsBodyType = Phaser.Physics.ARCADE;
         //invaders.setAll('outOfBoundsKill', true);
         //invaders.setAll('checkWorldBounds', true);
-        invaders.setAllChildren('health', 2);
+        //invaders.setAllChildren('health', 2);
         this.createInvaders();
         //创建、设置炮弹属性
         bullets = game.add.group();
@@ -93,6 +103,16 @@ var zz = [];
         bullets.setAll('anchor.y', 1);
         bullets.setAll('outOfBoundsKill', true);
         bullets.setAll('checkWorldBounds', true);
+
+        // 敌人的炮火
+        enemyBullets = game.add.group();
+        enemyBullets.enableBody = true;
+        enemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
+        enemyBullets.createMultiple(30, 'enemyBullet');
+        enemyBullets.setAll('anchor.x', 0.5);
+        enemyBullets.setAll('anchor.y', 1);
+        enemyBullets.setAll('outOfBoundsKill', true);
+        enemyBullets.setAll('checkWorldBounds', true);
 
         rockets = game.add.group();
         rockets.enableBody = true;
@@ -106,36 +126,48 @@ var zz = [];
         bosss = game.add.group();
         bosss.enableBody = true;
         bosss.physicsBodyType = Phaser.Physics.ARCADE;
-
         bosss.setAllChildren('health', 2);
+
+        wrenches = game.add.group();
+        wrenches.enableBody = true;
+        wrenches.physicsBodyType = Phaser.Physics.ARCADE;
+
+        gears = game.add.group();
+        gears.enableBody = true;
+        gears.physicsBodyType = Phaser.Physics.ARCADE;
 
         cursors = game.input.keyboard.createCursorKeys();
         fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
         fireButton.onDown.add(this.actKeyDown, this);
         //fireButton.onDown.add(actReact(),this);
         //运行星球
-         if (game.renderType === Phaser.WEBGL)
-    {
-        max = 1;
-    }
+        if (game.renderType === Phaser.WEBGL)
+        {
+          max = 1;
+        }
 
-    var sprites = game.add.spriteBatch();
+        var sprites = game.add.spriteBatch();
 
-    stars = [];
+        stars = [];
 
-    for (var i = 0; i < max; i++)
-    {
-        xx[i] = Math.floor(Math.random() * 800) - 400;
-        yy[i] = Math.floor(Math.random() * 600) - 300;
-        zz[i] = Math.floor(Math.random() * 1700) - 100;
+        for (var i = 0; i < max; i++)
+        {
+          xx[i] = Math.floor(Math.random() * 800) - 400;
+          yy[i] = Math.floor(Math.random() * 600) - 300;
+          zz[i] = Math.floor(Math.random() * 1700) - 100;
 
-        var star = game.make.sprite(0, 0, 'moon');
-        star.anchor.set(0.5);
+          var star = game.make.sprite(0, 0, 'moon');
+          star.anchor.set(0.5);
 
-        sprites.addChild(star);
+          sprites.addChild(star);
 
-        stars.push(star);
-    }
+          stars.push(star);
+        }
+        lifestate = game.add.text(50, 10, "", {
+                    fontSize: "16px",
+                    fill: "#fff"
+                }).anchor.setTo(0.5);
+        lifestate.visible = false;
     }
 
 
@@ -151,8 +183,11 @@ var zz = [];
             player.body.velocity.x = 200;
         }
         }
-
-
+        //敌人射击
+        if (game.time.now > firingTimer)
+        {
+            this.enemyFires();
+        }
 
         console.log(invaders.countLiving());
 
@@ -162,33 +197,35 @@ var zz = [];
         game.physics.arcade.overlap(bullets, invaders, this.collisionHandler, null, this);
         game.physics.arcade.overlap(rockets, invaders, this.collisionHandler, null, this);
         game.physics.arcade.overlap(bullets, bosss, this.hintBoss, null, this);//射中boss
+        game.physics.arcade.overlap(enemyBullets, player, this.enemyHitsPlayer, null, this);
 
         if (rocket) {//如何保留火箭存在的状态？
             if (invaders.countLiving() > 0)
                 game.physics.arcade.moveToObject(rocket, invaders.getAt(invaders.length - 1), 30, 1200);//火箭跟踪敌人
         }
-        game.physics.arcade.moveToObject(invaders.getAt(invaders.length - 1), player, 3, 120);//跟踪模式
-
-            for (var i = 0; i < max; i++)
-    {
-        stars[i].perspective = distance / (distance - zz[i]);
-        stars[i].x = game.world.centerX + xx[i] * stars[i].perspective;
-        stars[i].y = game.world.centerY + yy[i] * stars[i].perspective;
-
-        zz[i] += speed;
-
-        if (zz[i] > 290)
+        game.physics.arcade.moveToObject(invaders.getAt(invaders.length - 1), player, 3, 800);//跟踪模式
+        //星球的运行
+        for (var i = 0; i < max; i++)
         {
+          stars[i].perspective = distance / (distance - zz[i]);
+          stars[i].x = game.world.centerX + xx[i] * stars[i].perspective;
+          stars[i].y = game.world.centerY + yy[i] * stars[i].perspective;
+
+          zz[i] += speed;
+
+          if (zz[i] > 290)
+          {
             zz[i] -= 600;
+          }
+
+          //stars[i].alpha = Math.min(stars[i].perspective / 2, 1);
+          stars[i].scale.set(stars[i].perspective / 2);
+          //stars[i].rotation += 0.1;
+
         }
 
-        //stars[i].alpha = Math.min(stars[i].perspective / 2, 1);
-        stars[i].scale.set(stars[i].perspective / 2);
-        //stars[i].rotation += 0.1;
-
     }
 
-    }
    this.actKeyDown = function(){
        if(!isOver)
                {
@@ -212,6 +249,29 @@ var zz = [];
             }
         }
     }
+    this.enemyFires = function(){
+      //  Grab the first bullet we can from the pool
+      enemyBullet = enemyBullets.getFirstExists(false);
+      livingEnemies.length=0;
+      invaders.forEachAlive(function(invader){
+      // put every living enemy in an array
+      livingEnemies.push(invader);
+    });
+
+    if (enemyBullet && livingEnemies.length > 0)
+    {
+
+        var random=game.rnd.integerInRange(0,livingEnemies.length-1);
+        // randomly select one of them
+        var shooter=livingEnemies[random];
+        // And fire the bullet from this enemy
+        enemyBullet.reset(shooter.body.x, shooter.body.y);
+
+        game.physics.arcade.moveToObject(enemyBullet,player,500);
+        firingTimer = game.time.now + 2000;
+    }
+
+}
 
     this.fireRocket = function () {
         rocket = rockets.getFirstExists(false);
@@ -235,10 +295,17 @@ var zz = [];
         if (invader.life == 0) {
             invader.kill();
             kills++;
+            if(kills == 2 || kills ==4){
+                gear = gears.create(400, 20, 'wrench');//Boss出场！
+                gear.anchor.setTo(0.5, 0.5);//待查
+                gear.body.move = false;
+                gear.outOfBoundsKill = true;
+                gear.checkWorldBounds = true;
+                gear.body.velocity.y = 120;
+            }
             if (kills == 3) {
                 boss = bosss.create(400, 20, 'boss');//Boss出场！
                 boss.anchor.setTo(0.5, 0.5);//待查
-
                 boss.life = 5;
             }
         }
@@ -256,6 +323,14 @@ var zz = [];
                 }).anchor.setTo(0.5);
                 currentLevel++;
         }
+    }
+    this.enemyHitsPlayer = function(player, enemyBullet){
+        console.log("hit");
+        enemyBullet.kill();
+        player.life--;
+        lifestate.text = "2";
+        lifestate.visible = true;
+        console.log(player.life);
     }
     this.createInvaders = function () {
         for (var i = 0; i < 3; i++) {
